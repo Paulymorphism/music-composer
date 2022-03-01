@@ -1,0 +1,97 @@
+<style>
+    button {
+        border: #ffffff;
+        height: 40px;
+        width: 125px;
+    }
+
+    .canvasas {
+        margin: auto;
+    }
+</style>
+
+<div id="landing">
+    Name: <input id="playername" type="text"></input><br>
+    Room ID: <input id="roomid" type="text"></input><br>
+    <button id="start">Confirm</button>
+</div>
+
+<div id="g_canvas" class="canvases" style="text-align: center;">
+    <div style="overflow: scroll;">
+        <canvas id="text-history" width="700" height="1200" style="border:3px solid rgb(0, 0, 0);"></canvas>
+    </div>
+    <input id="inputchat" type="text" style="width: 600px; height: 50px;"></input>
+    <button id="send" style="background-color: #4ddf20; color:#ffffff; text-align: center; font-size:20px">Send</button>
+</div>
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script>
+    var socket = io();
+    var playername = document.getElementById('playername').value;
+    var roomid = document.getElementById('roomid').value;
+    var canvas_x = 30;
+
+    //landing page
+    document.getElementById("start").onclick = function () {
+        playername = document.getElementById('playername').value
+        socket.emit('signIn', {
+            playername: playername,
+            roomid: roomid
+        })
+    }
+    socket.on('signInResponse', function (data) {
+        if (data.success) {
+            document.getElementById('landing').style.display = 'none';
+            document.getElementById('g_canvas').style.display = 'inline-block';
+        }
+        else {
+            alert("Room is full")
+        }
+    });
+
+
+    //game
+    var textbox = document.getElementById("text-history").getContext("2d");
+    textbox.font = "50px Arial"
+
+    //send packages to server
+    var send_button = document.getElementById("send");
+    var chat_text = document.getElementById("inputchat");
+    chat_text.addEventListener("keyup", function (event) {
+        if (event.keyCode == 13) {
+            event.preventDefault();
+            send_button.click();
+        }
+    })
+    send_button.onclick = function () {
+        socket.emit('snd-msg', {
+            chat: chat_text.value,
+            room: roomid,
+            sender: playername
+        });
+        document.getElementById("inputchat").value = "";
+    }
+
+    //recieve packages from server
+    socket.on('rcv-msg', function (data) {
+        textbox.font = "15px Lucida Console"
+        textbox.fillText(data.sender, 10, canvas_x, 490);
+        textbox.fillText(data.time, 510, canvas_x, 290);
+        canvas_x += 25
+        textbox.fillText(data.message, 10, canvas_x, 680);
+        canvas_x += 25
+        if (canvas_x + 25 > textbox.height) {
+            textbox.height += 25;
+
+        }
+    })
+
+
+    socket.on('player2found', function (data) {
+
+    })
+
+    socket.on('player2left', function () {
+        textbox.clearRect(0, 0, 300, 400)
+    })
+
+</script>
